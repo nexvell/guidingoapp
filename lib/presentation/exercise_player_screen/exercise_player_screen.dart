@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter/foundation.dart';
 import 'package:sizer/sizer.dart';
 
 import '../../core/attempts_tracker.dart';
@@ -65,7 +66,7 @@ class _ExercisePlayerScreenState extends State<ExercisePlayerScreen> {
   }
 
   Future<void> _initialize() async {
-    print('🔧 Initializing Exercise Player...');
+    _debugLog('🔧 Initializing Exercise Player...');
 
     await _attemptsTracker.initialize();
     await _livesController.initialize();
@@ -76,7 +77,7 @@ class _ExercisePlayerScreenState extends State<ExercisePlayerScreen> {
       final args =
           ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
 
-      print('📦 Arguments received: $args');
+      _debugLog('📦 Arguments received: $args');
 
       if (args != null) {
         _mode = args['mode'] ?? 'impara';
@@ -89,7 +90,7 @@ class _ExercisePlayerScreenState extends State<ExercisePlayerScreen> {
         _sectionId = rawSectionId?.toString();
         _currentExerciseNumber = args['exerciseNumber'] as int?;
 
-        print(
+        _debugLog(
           '🎯 Loading quiz - Mode: $_mode, ModuleID: $_moduleId (type: ${_moduleId.runtimeType}), SectionID: $_sectionId (type: ${_sectionId.runtimeType}), ExerciseNum: $_currentExerciseNumber',
         );
 
@@ -98,14 +99,14 @@ class _ExercisePlayerScreenState extends State<ExercisePlayerScreen> {
         _totalExercisesInSottomodulo = args['totalExercises'];
 
         // Log what we extracted
-        print(
+        _debugLog(
           '📋 Extracted - ModuleID: $_moduleId, SectionID: $_sectionId, ExerciseNum: $_currentExerciseNumber',
         );
 
         if (args['questions'] != null) {
           // Ripasso mode with pre-selected questions
           _exercises = List<Map<String, dynamic>>.from(args['questions']);
-          print(
+          _debugLog(
             '✅ Loaded ${_exercises.length} pre-selected questions for $_mode',
           );
         }
@@ -114,21 +115,21 @@ class _ExercisePlayerScreenState extends State<ExercisePlayerScreen> {
       // If no questions provided, use centralized question bank
       if (_exercises.isEmpty) {
         _exercises = ImparaQuestions.getRandomQuestions(10);
-        print(
+        _debugLog(
           '✅ Loaded ${_exercises.length} random questions from centralized bank',
         );
       }
 
       // DIAGNOSTIC: Check if questions have proper IDs
       if (_exercises.isNotEmpty) {
-        print(
+        _debugLog(
           '🔍 First question ID: ${_exercises.first['id']}, Type: ${_exercises.first['type']}',
         );
       }
 
       // Log exercise types for debugging
       final types = _exercises.map((e) => e['type']).toSet();
-      print('📋 Exercise types in session: $types');
+      _debugLog('📋 Exercise types in session: $types');
 
       if (mounted) setState(() {});
     });
@@ -180,9 +181,10 @@ class _ExercisePlayerScreenState extends State<ExercisePlayerScreen> {
     Map<String, dynamic> exercise,
     ColorScheme colorScheme,
   ) {
-    final type = exercise['type'] as String;
+    final rawType = exercise['type'];
+    final type = _resolveExerciseType(exercise);
 
-    print('🎮 Rendering exercise type: $type');
+    _debugLog('🎮 Rendering exercise type: $type (raw: $rawType)');
 
     // Handle both 'official_tf' and 'true_false' types
     if (type == 'true_false' || type == 'official_tf') {
@@ -214,29 +216,13 @@ class _ExercisePlayerScreenState extends State<ExercisePlayerScreen> {
       );
     }
 
-    // If unsupported type, log and show error
-    print(
-      '❌ UNSUPPORTED EXERCISE TYPE: $type for question ID ${exercise['id']}',
+    _debugLog(
+      '⚠️ Falling back to default exercise rendering for type: $rawType',
     );
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          const Icon(Icons.error_outline, size: 64, color: Colors.red),
-          SizedBox(height: 2.h),
-          Text(
-            'Tipo di esercizio non supportato',
-            style: Theme.of(context).textTheme.titleMedium,
-          ),
-          SizedBox(height: 1.h),
-          Text('Tipo: $type', style: Theme.of(context).textTheme.bodySmall),
-          SizedBox(height: 3.h),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Torna indietro'),
-          ),
-        ],
-      ),
+    return TrueFalseWidget(
+      question: exercise['question'] as String,
+      selectedAnswer: selectedAnswer as bool?,
+      onAnswer: (answer) => _handleAnswer(answer, exercise),
     );
   }
 
@@ -250,10 +236,10 @@ class _ExercisePlayerScreenState extends State<ExercisePlayerScreen> {
 
     final isCorrect = _checkAnswer(answer, exercise);
 
-    print(
+    _debugLog(
       '📝 Answer recorded - QuizID: ${exercise['id']}, Correct: $isCorrect, Mode: $_mode',
     );
-    print(
+    _debugLog(
       '📍 Current context - ModuleID: $_moduleId, SectionID: $_sectionId, ExerciseNum: $_currentExerciseNumber',
     );
 
@@ -271,7 +257,7 @@ class _ExercisePlayerScreenState extends State<ExercisePlayerScreen> {
         await _mistakeTracker!.initialize();
       }
       await _mistakeTracker!.recordMistake(exercise['id'].toString());
-      print('❌ Mistake recorded in MistakeTracker: ${exercise['id']}');
+      _debugLog('❌ Mistake recorded in MistakeTracker: ${exercise['id']}');
 
       _livesController.decrementLife();
       HapticFeedback.heavyImpact();
@@ -347,7 +333,7 @@ class _ExercisePlayerScreenState extends State<ExercisePlayerScreen> {
   }
 
   bool _checkAnswer(dynamic answer, Map<String, dynamic> exercise) {
-    final type = exercise['type'] as String;
+    final type = _resolveExerciseType(exercise);
 
     switch (type) {
       case 'true_false':
@@ -356,6 +342,59 @@ class _ExercisePlayerScreenState extends State<ExercisePlayerScreen> {
         return answer == exercise['correct_answer'];
       default:
         return false;
+    }
+  }
+
+  void _debugLog(String message) {
+    if (kDebugMode) {
+      debugPrint(message);
+    }
+  }
+
+  String _resolveExerciseType(Map<String, dynamic> exercise) {
+    final normalized = _normalizeExerciseType(exercise['type']);
+    if (normalized != 'unknown') {
+      return normalized;
+    }
+
+    final pairs = exercise['pairs'];
+    if (pairs is List && pairs.isNotEmpty) {
+      return 'match';
+    }
+
+    final options = exercise['options'];
+    if (options is List && options.isNotEmpty) {
+      return 'multiple_choice';
+    }
+
+    return 'true_false';
+  }
+
+  String _normalizeExerciseType(dynamic rawType) {
+    if (rawType == null) return 'unknown';
+    final normalized = rawType.toString().trim().toLowerCase();
+
+    switch (normalized) {
+      case 'true_false':
+      case 'truefalse':
+      case 'true/false':
+      case 'vero/falso':
+      case 'vero_falso':
+      case 'official_tf':
+      case 'tf':
+        return 'true_false';
+      case 'multiple_choice':
+      case 'multiplechoice':
+      case 'multiple-choice':
+      case 'scelta multipla':
+      case 'scelta_multipla':
+        return 'multiple_choice';
+      case 'match':
+      case 'matching':
+      case 'abbinamento':
+        return 'match';
+      default:
+        return 'unknown';
     }
   }
 
@@ -368,7 +407,7 @@ class _ExercisePlayerScreenState extends State<ExercisePlayerScreen> {
       });
     } else {
       // CRITICAL FIX: Ensure we're in sottomodulo mode AND have proper IDs
-      print(
+      _debugLog(
         '🏁 Quiz completed - Mode: $_mode, ModuleID: $_moduleId, SectionID: $_sectionId, ExerciseNum: $_currentExerciseNumber',
       );
 
@@ -377,7 +416,7 @@ class _ExercisePlayerScreenState extends State<ExercisePlayerScreen> {
           _sectionId != null &&
           _currentExerciseNumber != null) {
         // Mark quiz as completed in ProgressStore
-        print(
+        _debugLog(
           '💾 Marking quiz $_currentExerciseNumber as completed for $_moduleId/$_sectionId',
         );
         await _progressStore.setQuizCompleted(
@@ -392,11 +431,11 @@ class _ExercisePlayerScreenState extends State<ExercisePlayerScreen> {
           _sectionId!,
           _currentExerciseNumber!,
         );
-        print('✅ Verification - Quiz marked completed: $wasCompleted');
+        _debugLog('✅ Verification - Quiz marked completed: $wasCompleted');
 
         _handleSottomoduloCompletion();
       } else {
-        print(
+        _debugLog(
           '⚠️ Not saving progress - Mode: $_mode, Missing IDs: moduleId=$_moduleId, sectionId=$_sectionId, exerciseNum=$_currentExerciseNumber',
         );
 
