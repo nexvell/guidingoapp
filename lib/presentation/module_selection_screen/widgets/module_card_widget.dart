@@ -17,6 +17,12 @@ class ModuleCardWidget extends StatelessWidget {
 
   IconData _getIconData(String iconName) {
     switch (iconName) {
+      case 'traffic_light':
+        return Icons.traffic_rounded;
+      case 'rule':
+        return Icons.rule_rounded;
+      case 'health_and_safety':
+        return Icons.health_and_safety_rounded;
       case 'traffic':
         return Icons.traffic_rounded;
       case 'merge_type':
