@@ -222,7 +222,6 @@ class AttemptsTracker extends ChangeNotifier {
     _recentlyShownQuestions.clear();
     _dailyRipassoProgress = 0;
     _lastRipassoDate = DateTime.now();
-    final prefs = await SharedPreferences.getInstance();
     await _saveToPrefs();
     notifyListeners();
   }

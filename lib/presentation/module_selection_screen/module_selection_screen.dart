@@ -395,11 +395,22 @@ class _ModuleSelectionScreenState extends State<ModuleSelectionScreen> {
 
   IconData _getIconData(String iconName) {
     switch (iconName) {
-      case 'traffic': return Icons.traffic_rounded;
-      case 'merge_type': return Icons.merge_type_rounded;
-      case 'speed': return Icons.speed_rounded;
-      case 'social_distance': return Icons.social_distance_rounded;
-      default: return Icons.school_rounded;
+      case 'traffic_light':
+        return Icons.traffic_rounded;
+      case 'rule':
+        return Icons.rule_rounded;
+      case 'health_and_safety':
+        return Icons.health_and_safety_rounded;
+      case 'traffic':
+        return Icons.traffic_rounded;
+      case 'merge_type':
+        return Icons.merge_type_rounded;
+      case 'speed':
+        return Icons.speed_rounded;
+      case 'social_distance':
+        return Icons.social_distance_rounded;
+      default:
+        return Icons.school_rounded;
     }
   }
 }
