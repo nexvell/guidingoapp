@@ -4,3 +4,7 @@ export '../routes/app_routes.dart';
 export '../widgets/custom_icon_widget.dart';
 export '../widgets/custom_image_widget.dart';
 export '../theme/app_theme.dart';
+export 'data/app_data.dart';
+export 'progress_store.dart';
+export 'lives_controller.dart';
+export 'attempts_tracker.dart';

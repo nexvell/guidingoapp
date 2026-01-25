@@ -11,7 +11,7 @@ class CustomErrorWidget extends StatelessWidget {
   final String? errorMessage;
 
   const CustomErrorWidget({Key? key, this.errorDetails, this.errorMessage})
-    : super(key: key);
+      : super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -33,7 +33,7 @@ class CustomErrorWidget extends StatelessWidget {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  "Something went wrong",
+                  "Si è verificato un errore",
                   style: const TextStyle(
                     fontSize: 24,
                     fontWeight: FontWeight.w500,
@@ -42,8 +42,8 @@ class CustomErrorWidget extends StatelessWidget {
                 ),
                 const SizedBox(height: 4),
                 SizedBox(
-                  child: const Text(
-                    'We encountered an unexpected error while processing your request.',
+                  child: Text(
+                    errorMessage ?? 'Abbiamo riscontrato un errore imprevisto durante l\'elaborazione della tua richiesta.',
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       fontSize: 16,
@@ -66,7 +66,7 @@ class CustomErrorWidget extends StatelessWidget {
                     size: 18,
                     color: Colors.white,
                   ),
-                  label: const Text('Back'),
+                  label: const Text('Indietro'),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: theme.primaryColor,
                     foregroundColor: Colors.white,
