@@ -7,30 +7,39 @@ import './core/lives_controller.dart';
 import './presentation/splash_screen/splash_screen.dart';
 import './services/supabase_service.dart';
 import 'core/app_export.dart';
+import 'widgets/custom_error_widget.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Initialize Supabase
+  // Set preferred orientations first
+  await SystemChrome.setPreferredOrientations([
+    DeviceOrientation.portraitUp,
+  ]);
+
+  // Initialize Supabase and handle potential errors
+  bool supabaseInitialized = false;
   try {
     await SupabaseService.initialize();
+    supabaseInitialized = true;
   } catch (e) {
     debugPrint('Failed to initialize Supabase: $e');
+    // If Supabase fails, we'll show an error screen
   }
 
-  // Initialize global controllers
-  await LivesController().initialize();
-  await AttemptsTracker().initialize();
+  if (supabaseInitialized) {
+    // Initialize global controllers only if Supabase is working
+    await LivesController().initialize();
+    await AttemptsTracker().initialize();
+  }
 
-  SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]).then((
-    _,
-  ) {
-    runApp(const MyApp());
-  });
+  runApp(MyApp(supabaseInitialized: supabaseInitialized));
 }
 
 class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+  final bool supabaseInitialized;
+
+  const MyApp({super.key, required this.supabaseInitialized});
 
   @override
   Widget build(BuildContext context) {
@@ -41,15 +50,11 @@ class MyApp extends StatelessWidget {
           theme: AppTheme.lightTheme,
           darkTheme: AppTheme.darkTheme,
           themeMode: ThemeMode.system,
-          builder: (context, child) {
-            return MediaQuery(
-              data: MediaQuery.of(
-                context,
-              ).copyWith(textScaler: TextScaler.linear(1.0)),
-              child: child!,
-            );
-          },
-          home: const SplashScreen(),
+          home: supabaseInitialized
+              ? const SplashScreen()
+              : const CustomErrorWidget(
+                  errorMessage: 'Impossibile connettersi. Controlla la tua connessione e riavvia l'app.',
+                ),
           routes: AppRoutes.routes,
         );
       },

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:timezone/timezone.dart' as tz;
+import 'package:timezone/data/latest.dart' as tz;
 
 /// Global Lives Controller for managing lives across all screens
 /// Lives are synced across Home, Impara, Ripasso, and Esame modes
@@ -23,6 +25,9 @@ class LivesController extends ChangeNotifier {
   Future<void> initialize() async {
     if (_isInitialized) return;
 
+    // Initialize timezone database
+    tz.initializeTimeZones();
+
     final prefs = await SharedPreferences.getInstance();
     _currentLives = prefs.getInt(_livesKey) ?? maxLives;
 
@@ -38,8 +43,9 @@ class LivesController extends ChangeNotifier {
   }
 
   Future<void> _checkAndResetIfNeeded() async {
-    final now = _getRomeDateTime();
-    final today = DateTime(now.year, now.month, now.day);
+    final rome = tz.getLocation('Europe/Rome');
+    final now = tz.TZDateTime.now(rome);
+    final today = tz.TZDateTime(rome, now.year, now.month, now.day);
 
     if (_lastResetDate == null) {
       _lastResetDate = today;
@@ -47,11 +53,7 @@ class LivesController extends ChangeNotifier {
       return;
     }
 
-    final lastResetDay = DateTime(
-      _lastResetDate!.year,
-      _lastResetDate!.month,
-      _lastResetDate!.day,
-    );
+    final lastResetDay = tz.TZDateTime.from(_lastResetDate!, rome);
 
     // If last reset was before today, reset lives
     if (lastResetDay.isBefore(today)) {
@@ -62,22 +64,10 @@ class LivesController extends ChangeNotifier {
     }
   }
 
-  DateTime _getRomeDateTime() {
-    // Europe/Rome timezone is UTC+1 (UTC+2 during DST)
-    // Approximation: Add 1 hour to UTC (2 hours during summer)
-    final utcNow = DateTime.now().toUtc();
-    final month = utcNow.month;
-
-    // Simple DST check: March-October is typically DST in Europe
-    final isDst = month >= 3 && month <= 10;
-    final offset = isDst ? 2 : 1;
-
-    return utcNow.add(Duration(hours: offset));
-  }
-
   DateTime getNextResetTime() {
-    final now = _getRomeDateTime();
-    final tomorrow = DateTime(now.year, now.month, now.day + 1);
+    final rome = tz.getLocation('Europe/Rome');
+    final now = tz.TZDateTime.now(rome);
+    final tomorrow = tz.TZDateTime(rome, now.year, now.month, now.day + 1);
     return tomorrow;
   }
 
@@ -106,8 +96,10 @@ class LivesController extends ChangeNotifier {
   }
 
   Future<void> reset() async {
+    final rome = tz.getLocation('Europe/Rome');
+    final now = tz.TZDateTime.now(rome);
     _currentLives = maxLives;
-    _lastResetDate = _getRomeDateTime();
+    _lastResetDate = tz.TZDateTime(rome, now.year, now.month, now.day);
     await _saveToPrefs();
     notifyListeners();
   }

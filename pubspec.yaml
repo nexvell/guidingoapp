@@ -32,6 +32,7 @@ dependencies:
 
   flutter_slidable: any
   universal_html: ^2.2.4
+  timezone: ^0.10.1
 dev_dependencies:
   flutter_test:    # CRITICAL: Required for Flutter project testing - DO NOT REMOVE
     sdk: flutter   # CRITICAL: Required for Flutter project testing - DO NOT REMOVE
